@@ -478,6 +478,40 @@ def test_narrow_drops_the_question_when_one_reading_is_left():
     assert narrow(two, frozenset({"ハラ"})) is None
 
 
+def test_narrow_keeps_the_dropped_readings_for_a_second_question():
+    narrowed = narrow(belly(), frozenset({"ハラ"}))
+    assert narrowed is not None
+    assert narrowed.all_options is not None
+    assert list(narrowed.all_options) == ["ハラ", "フク", "オナカ"]
+    assert narrow(belly(), frozenset({"フク"})).all_options is None
+
+
+def test_build_reading_questions_offer_every_reading_beside_the_common_ones():
+    questions = build_reading_questions("腹が減った", [narrow(belly(), frozenset({"ハラ"}))])
+    assert list(questions) == ["r0_reading", "r0_reading_all"]
+    assert list(questions["r0_reading"]["criteria"]) == ["ハラ", "オナカ", "none"]
+    assert list(questions["r0_reading_all"]["criteria"]) == ["ハラ", "フク", "オナカ", "none"]
+
+
+@pytest.mark.parametrize(
+    ("common", "every", "expected"),
+    [
+        (choice("none"), choice("フク"), ["フク"]),
+        (choice("none", 0.3), choice("フク"), ["フク"]),
+        (choice("ハラ"), choice("フク"), ["ハラ"]),
+        (choice("none"), choice("オナカ"), []),
+        (choice("none"), choice("フク", 0.3), []),
+        (choice("none"), None, []),
+    ],
+)
+def test_choose_options_takes_a_dropped_reading_only_after_none_of_the_common_ones_fits(
+    common: ChoiceAnswer, every: ChoiceAnswer | None, expected: list[str]
+):
+    answers = {"r0_reading": common} | ({} if every is None else {"r0_reading_all": every})
+    chosen = choose_options([narrow(belly(), frozenset({"ハラ"}))], answers, 0.6)
+    assert [picked.key for picked in chosen] == expected
+
+
 def test_with_voicevox_reading_offers_what_voicevox_says_beside_the_dictionary():
     text = "こんなことを云いながら"
     read = spoken_reader(

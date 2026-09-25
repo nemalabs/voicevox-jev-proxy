@@ -203,7 +203,8 @@ class ReadingCandidate:
     """A word with the readings to ask about.
 
     followed_by is the part of speech of the first word after its particles and auxiliaries, "" at
-    the end of the text.
+    the end of the text. all_options holds every reading when `narrow` dropped the rare ones, None
+    when it dropped none.
     """
 
     start: int
@@ -213,6 +214,7 @@ class ReadingCandidate:
     options: Mapping[str, ReadingOption]
     attached_moras: int = 0
     followed_by: str = ""
+    all_options: Mapping[str, ReadingOption] | None = None
 
     @property
     def id(self) -> str:
@@ -535,13 +537,17 @@ def narrow(candidate: ReadingCandidate, current: frozenset[str]) -> ReadingCandi
     A kana word is read the same way as all its lemmas, so `current` holds the lemmas its VOICEVOX
     accent fits: accented as a rare lemma (ところ flat, as 野老) it keeps every lemma for Jev to pick
     by meaning.
+    The dropped readings stay in all_options for a second question, which counts only when Jev finds
+    none of the common readings right (`choose_options`): VOICEVOX reads 舞台の下手 as へた, and
+    しもて, the side of a stage, is rare in JMdict.
     """
     common = common_only(candidate.options)
     options = common if current & common.keys() else dict(candidate.options)
     inflected = candidate.pos not in UNINFLECTED_POS
     if len(options) < 2 or single_sense(options, inflected=inflected):  # noqa: PLR2004
         return None
-    return replace(candidate, options=options)
+    dropped = len(options) < len(candidate.options)
+    return replace(candidate, options=options, all_options=dict(candidate.options) if dropped else None)
 
 
 def next_word_pos(following: Sequence[Morpheme]) -> str:
@@ -583,17 +589,23 @@ def option_context(text: str, candidate: ReadingCandidate, option: ReadingOption
 def build_reading_questions(text: str, candidates: list[ReadingCandidate]) -> dict[str, JsonValue]:
     questions: dict[str, JsonValue] = {}
     for candidate in candidates:
-        criteria: dict[str, JsonValue] = {
-            key: option.describe(option_context(text, candidate, option)) for key, option in candidate.options.items()
-        }
-        question, note, none = _wording(candidate)
-        criteria[NONE_KEY] = none
-        questions[f"{candidate.id}_reading"] = {
-            "type": "choice",
-            "instructions": {"word": candidate.surface, "question": question, "note": note},
-            "criteria": criteria,
-        }
+        questions[f"{candidate.id}_reading"] = _reading_question(text, candidate, candidate.options)
+        if candidate.all_options is not None:
+            questions[f"{candidate.id}_reading_all"] = _reading_question(text, candidate, candidate.all_options)
     return questions
+
+
+def _reading_question(text: str, candidate: ReadingCandidate, options: Mapping[str, ReadingOption]) -> JsonValue:
+    criteria: dict[str, JsonValue] = {
+        key: option.describe(option_context(text, candidate, option)) for key, option in options.items()
+    }
+    question, note, none = _wording(candidate)
+    criteria[NONE_KEY] = none
+    return {
+        "type": "choice",
+        "instructions": {"word": candidate.surface, "question": question, "note": note},
+        "criteria": criteria,
+    }
 
 
 def _wording(candidate: ReadingCandidate) -> tuple[str, str, str]:
@@ -622,16 +634,30 @@ class ReadingChoice:
 def choose_options(
     candidates: list[ReadingCandidate], answers: Mapping[str, Answer], threshold: float
 ) -> list[ReadingChoice]:
+    """Pick the answered reading of each word.
+
+    When Jev finds none of the common readings right, the answer about every reading decides, and only
+    a reading `narrow` dropped can win it. The none answer need not be confident: the second one must.
+    """
     choices: list[ReadingChoice] = []
     for candidate in candidates:
         answer = answers.get(f"{candidate.id}_reading")
+        options = candidate.options
+        if isinstance(answer, ChoiceAnswer) and answer.choice == NONE_KEY:
+            answer, options = answers.get(f"{candidate.id}_reading_all"), _dropped(candidate)
         if not isinstance(answer, ChoiceAnswer) or answer.confidence < threshold:
             continue
-        option = candidate.options.get(answer.choice)
+        option = options.get(answer.choice)
         if option is None:
             continue
         choices.append(ReadingChoice(candidate, answer.choice, option, answer.confidence))
     return choices
+
+
+def _dropped(candidate: ReadingCandidate) -> Mapping[str, ReadingOption]:
+    if candidate.all_options is None:
+        return {}
+    return {key: option for key, option in candidate.all_options.items() if key not in candidate.options}
 
 
 def reading_edits(choices: list[ReadingChoice]) -> list[Edit]:
