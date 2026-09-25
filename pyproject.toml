@@ -1,0 +1,70 @@
+[project]
+name = "vovovo"
+version = "0.1.0"
+description = "VOICEVOX intonation correction driven by TypeSafe Jev judgments"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "ivy", email = "ivy@tohu.dev" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fugashi>=1.5.2",
+    "httpx>=0.28.1",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "sudachipy>=0.6.11",
+    "unidic-lite>=1.0.8",
+]
+
+[project.scripts]
+vovovo = "vovovo.cli:main"
+vovovo-pilot = "vovovo.pilot:main"
+vovovo-server = "vovovo.server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.6",
+]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = [".cache", ".build"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D1", "D203", "D213", "D400", "D415", "TD", "T201", "TRY003", "EM101", "COM812", "CPY"]
+allowed-confusables = ["ノ", "！", "？", "（", "）"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR2004", "ANN", "D", "INP001", "ARG"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
