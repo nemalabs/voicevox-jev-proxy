@@ -22,15 +22,7 @@ from voicevox_jev_proxy.intonation import (
     lower_heights,
     move_late_nuclei,
 )
-from voicevox_jev_proxy.laughter import (
-    Laugh,
-    build_laugh_questions,
-    find_laughs,
-    laugh_edits,
-    laugh_phrases,
-    overlaps,
-    voiced_spans,
-)
+from voicevox_jev_proxy.laughter import Laugh, build_laugh_questions, find_laughs, laugh_edits, overlaps
 from voicevox_jev_proxy.phrase_accents import Token, UnidicTokenizer
 from voicevox_jev_proxy.prosody import (
     SENTENCE_TYPE_KEY,
@@ -194,7 +186,7 @@ def render_changes(changes: list[Change]) -> str:
 class TextPlan:
     """What the first request asks about the text.
 
-    Where to split, where accent phrases break, how to read words and how to voice laughs. Splits,
+    Where to split, where accent phrases break, how to read words and which marks are laughs. Splits,
     breaks and readings that touch a laughter mark are left out, so the mark's own answer decides it.
     """
 
@@ -436,8 +428,7 @@ class Corrector:
         edited, query = done.text, done.query
         words = [] if self.lexicon is None else self.lexicon.words(edited)
         attachable = frozenset() if self.lexicon is None else attachable_phrases(query, edited, words, voice.read)
-        roles = PhraseRoles(attachable, laugh_phrases(query, edited, voiced_spans(done.kept), voice.read))
-        updated, structure_changes = apply_structure(query, answers, self.policy, roles)
+        updated, structure_changes = apply_structure(query, answers, self.policy, PhraseRoles(attachable))
         updated, late_changes = move_late_nuclei(updated)
         if needs_repitch([*structure_changes, *late_changes]):
             updated.accent_phrases = voice.repitch(updated.accent_phrases)

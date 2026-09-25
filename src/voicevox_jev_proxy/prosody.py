@@ -34,12 +34,9 @@ class PhraseRoles:
     """What the text itself says about phrases, whatever Jev answers.
 
     attachable: phrases whose first word the morphology allows to join the phrase before it.
-    laughs: phrases that only voice a laughter mark (草 read as くさ). They join no phrase and do not
-    rise: in 無理ゲーでしょ|くさ the question rises on でしょ.
     """
 
     attachable: frozenset[int] = frozenset()
-    laughs: frozenset[int] = frozenset()
 
 
 NO_ROLES = PhraseRoles()
@@ -138,9 +135,9 @@ def apply_structure(
     /mora_pitch recomputes the pitches; the caller does that.
     """
     updated = query.model_copy(deep=True)
-    changes, origins = _apply_merge(updated, answers, policy, roles)
-    rising = [index for index, origin in enumerate(origins) if origin not in roles.laughs]
-    changes += _apply_rise(updated, _choice(answers, SENTENCE_TYPE_KEY, policy), rising[-1] if rising else None)
+    changes = _apply_merge(updated, answers, policy, roles)
+    last = len(updated.accent_phrases) - 1 if updated.accent_phrases else None
+    changes += _apply_rise(updated, _choice(answers, SENTENCE_TYPE_KEY, policy), last)
     return updated, changes
 
 
@@ -182,23 +179,15 @@ def _apply_merge(
     answers: Mapping[str, Answer],
     policy: Policy,
     roles: PhraseRoles,
-) -> tuple[list[Change], list[int]]:
-    """Join attached phrases; also return, for each phrase left, the index it had before the join."""
+) -> list[Change]:
+    """Join attached phrases."""
     merged: list[AccentPhrase] = []
-    origins: list[int] = []
     changes: list[Change] = []
     for index, phrase in enumerate(query.accent_phrases):
         unit = _choice(answers, unit_key(index), policy)
-        joinable = (
-            index in roles.attachable
-            and index not in roles.laughs
-            and bool(merged)
-            and origins[-1] not in roles.laughs
-            and merged[-1].pause_mora is None
-        )
+        joinable = index in roles.attachable and bool(merged) and merged[-1].pause_mora is None
         if not joinable or unit is None or unit[0] not in MERGE_UNITS:
             merged.append(phrase)
-            origins.append(index)
             continue
         left = merged[-1]
         before = f"{left.reading}({left.accent})+{phrase.reading}({phrase.accent})"
@@ -208,7 +197,7 @@ def _apply_merge(
             Change(phrase_id(len(merged) - 1), MERGE_FIELD, before, f"{left.reading}({left.accent})", reason)
         )
     query.accent_phrases = merged
-    return changes, origins
+    return changes
 
 
 def _apply_rise(query: AudioQuery, sentence_type: tuple[str, float] | None, index: int | None) -> list[Change]:

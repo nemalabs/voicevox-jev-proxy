@@ -216,10 +216,11 @@ def _keeps_phrasing(original: AudioQuery, edited: AudioQuery, start: int) -> boo
 
     A word that joins the phrase before it breaks the phrasing (ムラノ|モヘイ as ムラノモ|ヘイ). One
     that starts a phrase of its own does not (ソノカン as ソノ|アイダ), nor does a boundary that moves
-    to where it belongs (ナッタ|シフクワ as ナッタシ|ハラワ).
+    to where it belongs (ナッタ|シフクワ as ナッタシ|ハラワ), nor a word removed from the end of the
+    text, which leaves no phrase to start (ワレタ|ダブリュウ… as ワレタ).
     """
     before = _phrase_offsets(original)
-    return start not in before or start in _phrase_offsets(edited)
+    return start not in before or start in _phrase_offsets(edited) or start == len(reading_of(edited))
 
 
 def _phrase_offsets(query: AudioQuery) -> list[int]:

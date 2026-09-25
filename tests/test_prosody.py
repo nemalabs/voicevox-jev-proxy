@@ -139,24 +139,6 @@ def test_apply_structure_merges_only_phrases_the_morphology_allows():
     assert changes == []
 
 
-def test_apply_structure_rise_skips_trailing_laugh_phrases():
-    q = query(phrase(["ム", "リ"], 1), phrase(["デ", "ショ"], 1), phrase(["ワ", "ラ"], 1))
-    roles = PhraseRoles(laughs=frozenset({2}))
-    updated, changes = apply_structure(q, {"sentence_type": choice("confirmation")}, POLICY, roles)
-    assert [p.is_interrogative for p in updated.accent_phrases] == [False, True, False]
-    assert [(c.phrase_id, c.field) for c in changes] == [("p2", "is_interrogative")]
-
-
-def test_apply_structure_laugh_phrases_join_nothing():
-    q = query(phrase(["ヤ", "ル"], 2), phrase(["ワ", "ラ"], 1), phrase(["ヨ"], 1), phrase(["ネ"], 1))
-    answers = {f"p{index}_unit": choice("attached") for index in (2, 3, 4)} | {"sentence_type": choice("question")}
-    roles = PhraseRoles(attachable=frozenset({1, 2, 3}), laughs=frozenset({1}))
-    updated, changes = apply_structure(q, answers, POLICY, roles)
-    assert [p.reading for p in updated.accent_phrases] == ["ヤル", "ワラ", "ヨネ"]
-    assert updated.accent_phrases[2].is_interrogative is True
-    assert [(c.phrase_id, c.field) for c in changes] == [("p3", "merge"), ("p3", "is_interrogative")]
-
-
 def test_apply_structure_merge_carries_rise_to_merged_last_phrase():
     q = query(phrase(["ソ", "オ"], 1), phrase(["カ", "ナ"], 2))
     answers = {"p2_unit": choice("fixed"), "sentence_type": choice("question")}

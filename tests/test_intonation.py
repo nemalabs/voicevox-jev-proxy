@@ -264,7 +264,7 @@ def silencing_ask(sent: list[SystemOneRequest]):
 
     def ask(request: SystemOneRequest) -> SystemOneResponse:
         sent.append(request)
-        laugh = ChoiceAnswer(type="choice", choice="silent", confidence=0.9, probabilities={"silent": 0.9, "none": 0.1})
+        laugh = ChoiceAnswer(type="choice", choice="laugh", confidence=0.9, probabilities={"laugh": 0.9, "word": 0.1})
         answers = {"l6_laugh": laugh, "p1_head": choice("following"), "p4_unit": choice("attached")}
         return SystemOneResponse(model="jev-1.13.0", answers=answers)
 
