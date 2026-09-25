@@ -1,7 +1,7 @@
 import pytest
 
-from vovovo.edits import apply_edits
-from vovovo.laughter import (
+from voicevox_jev_proxy.edits import apply_edits
+from voicevox_jev_proxy.laughter import (
     build_laugh_questions,
     find_laughs,
     laugh_edits,
@@ -9,8 +9,8 @@ from vovovo.laughter import (
     overlaps,
     voiced_spans,
 )
-from vovovo.typesafe import ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.typesafe import ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 
 def choice(value: str, confidence: float = 0.9, probabilities: dict[str, float] | None = None) -> ChoiceAnswer:

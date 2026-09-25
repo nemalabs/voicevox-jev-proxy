@@ -4,11 +4,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from vovovo import cli
-from vovovo.accents import Word
-from vovovo.readings import ReadingCandidate, ReadingOption
-from vovovo.settings import Settings
-from vovovo.typesafe import (
+from voicevox_jev_proxy import cli
+from voicevox_jev_proxy.accents import Word
+from voicevox_jev_proxy.readings import ReadingCandidate, ReadingOption
+from voicevox_jev_proxy.settings import Settings
+from voicevox_jev_proxy.typesafe import (
     ChoiceAnswer,
     NoulAnswer,
     Pacer,
@@ -21,7 +21,7 @@ from vovovo.typesafe import (
     render_request,
     send,
 )
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora, VoicevoxClient
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora, VoicevoxClient
 
 SAMPLE_PHRASE = {
     "moras": [

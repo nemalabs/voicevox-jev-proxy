@@ -1,6 +1,6 @@
 import pytest
 
-from vovovo.phrase_accents import (
+from voicevox_jev_proxy.phrase_accents import (
     DROP,
     AccentOption,
     AccentQuestion,
@@ -17,9 +17,9 @@ from vovovo.phrase_accents import (
     word_marked,
     word_pitch,
 )
-from vovovo.prosody import Policy
-from vovovo.typesafe import ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.prosody import Policy
+from voicevox_jev_proxy.typesafe import ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 POLICY = Policy(threshold=0.6)
 GA = "動詞%F2@0,名詞%F1"

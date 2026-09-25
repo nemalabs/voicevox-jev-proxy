@@ -4,12 +4,12 @@ from dataclasses import dataclass
 
 from pydantic import JsonValue
 
-from vovovo.accents import DEPENDENT, Word, attaches, mora_total, phrase_starts
-from vovovo.edits import SEPARATOR, Edit, Rephrase, shifted
-from vovovo.prosody import MERGE_FIELD, Change, join_phrases
-from vovovo.readings import CONTENT_POS, NUMERAL
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AudioQuery
+from voicevox_jev_proxy.accents import DEPENDENT, Word, attaches, mora_total, phrase_starts
+from voicevox_jev_proxy.edits import SEPARATOR, Edit, Rephrase, shifted
+from voicevox_jev_proxy.prosody import MERGE_FIELD, Change, join_phrases
+from voicevox_jev_proxy.readings import CONTENT_POS, NUMERAL
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AudioQuery
 
 WHOLE_KEY = "whole"
 NONE_KEY = "none"

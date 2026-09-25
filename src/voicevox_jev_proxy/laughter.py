@@ -6,12 +6,12 @@ from dataclasses import dataclass
 
 from pydantic import JsonValue
 
-from vovovo.accents import mora_total, phrase_starts
-from vovovo.edits import Edit
-from vovovo.prosody import Change
-from vovovo.readings import clause_around, to_katakana
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AudioQuery
+from voicevox_jev_proxy.accents import mora_total, phrase_starts
+from voicevox_jev_proxy.edits import Edit
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.readings import clause_around, to_katakana
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AudioQuery
 
 LAUGH_FIELD = "laugh"
 SILENT_KEY = "silent"

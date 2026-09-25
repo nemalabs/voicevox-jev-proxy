@@ -1,5 +1,5 @@
 [project]
-name = "vovovo"
+name = "voicevox-jev-proxy"
 version = "0.1.0"
 description = "VOICEVOX intonation correction driven by TypeSafe Jev judgments"
 readme = "README.md"
@@ -19,9 +19,8 @@ dependencies = [
 ]
 
 [project.scripts]
-vovovo = "vovovo.cli:main"
-vovovo-pilot = "vovovo.pilot:main"
-vovovo-server = "vovovo.server:main"
+voicevox-jev-correct = "voicevox_jev_proxy.cli:main"
+voicevox-jev-proxy = "voicevox_jev_proxy.server:main"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]

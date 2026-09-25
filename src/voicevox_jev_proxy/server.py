@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 
-from vovovo.cli import (
+from voicevox_jev_proxy.cli import (
     Corrector,
     Voice,
     add_correction_arguments,
@@ -28,8 +28,8 @@ from vovovo.cli import (
     render_answers,
     render_changes,
 )
-from vovovo.settings import Settings
-from vovovo.typesafe import (
+from voicevox_jev_proxy.settings import Settings
+from voicevox_jev_proxy.typesafe import (
     Pacer,
     RequestCapError,
     SystemOneRequest,
@@ -38,7 +38,7 @@ from vovovo.typesafe import (
     render_request,
     send,
 )
-from vovovo.voicevox import AudioQuery, VoicevoxClient
+from voicevox_jev_proxy.voicevox import AudioQuery, VoicevoxClient
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 50121
@@ -234,7 +234,7 @@ def dry_correction(corrector: Corrector, client: VoicevoxClient, settings: Setti
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="vovovo-server",
+        prog="voicevox-jev-proxy",
         description="VOICEVOX-compatible server that corrects readings and intonation with Jev",
     )
     parser.add_argument("--host", default=DEFAULT_HOST)
@@ -284,7 +284,8 @@ def main(argv: list[str] | None = None) -> int:
     pacing = f"at most {args.request_cap} TypeSafe requests, {args.request_interval}s apart"
     mode = "dry run" if args.dry_run else pacing
     print(
-        f"vovovo-server on http://{args.host}:{args.port} for VOICEVOX at {settings.voicevox_url} ({mode})", flush=True
+        f"voicevox-jev-proxy on http://{args.host}:{args.port} for VOICEVOX at {settings.voicevox_url} ({mode})",
+        flush=True,
     )
     try:
         server.serve_forever()

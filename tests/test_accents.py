@@ -2,10 +2,10 @@ from dataclasses import replace
 
 import pytest
 
-from vovovo.accents import AccentTarget, Word, apply_accents, attachable_phrases, moved, phrase_accent
-from vovovo.edits import Edit
-from vovovo.prosody import Change
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.accents import AccentTarget, Word, apply_accents, attachable_phrases, moved, phrase_accent
+from voicevox_jev_proxy.edits import Edit
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 PAUSE = Mora(text="、", vowel="pau", vowel_length=0.3, pitch=0.0)
 

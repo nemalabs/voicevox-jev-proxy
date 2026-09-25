@@ -15,12 +15,12 @@ from dataclasses import dataclass
 
 from pydantic import JsonValue
 
-from vovovo.accents import mora_total, phrase_starts
-from vovovo.edits import spoken
-from vovovo.phrase_accents import Token
-from vovovo.prosody import ACCENT_FIELD, Change, phrase_id
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery
+from voicevox_jev_proxy.accents import mora_total, phrase_starts
+from voicevox_jev_proxy.edits import spoken
+from voicevox_jev_proxy.phrase_accents import Token
+from voicevox_jev_proxy.prosody import ACCENT_FIELD, Change, phrase_id
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery
 
 HEIGHT_FIELD = "height"
 HEIGHT_SKIPPED_FIELD = f"{HEIGHT_FIELD}_skipped"

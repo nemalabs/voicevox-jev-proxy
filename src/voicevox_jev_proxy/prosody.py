@@ -4,8 +4,8 @@ from difflib import SequenceMatcher
 
 from pydantic import JsonValue
 
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery
 
 ACCENT_FIELD = "accent"
 MERGE_FIELD = "merge"

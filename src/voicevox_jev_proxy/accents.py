@@ -2,9 +2,9 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from itertools import pairwise
 
-from vovovo.edits import Edit
-from vovovo.prosody import ACCENT_FIELD, Change, join_phrases
-from vovovo.voicevox import AccentPhrase, AudioQuery
+from voicevox_jev_proxy.edits import Edit
+from voicevox_jev_proxy.prosody import ACCENT_FIELD, Change, join_phrases
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery
 
 SKIPPED_FIELD = f"{ACCENT_FIELD}_skipped"
 ATTACHING_POS = frozenset({"助詞", "助動詞", "接尾辞"})

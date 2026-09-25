@@ -2,8 +2,8 @@ from dataclasses import replace
 
 import pytest
 
-from vovovo.edits import Edit, apply_edits, drop_overlaps, placed_spans
-from vovovo.prosody import Change
+from voicevox_jev_proxy.edits import Edit, apply_edits, drop_overlaps, placed_spans
+from voicevox_jev_proxy.prosody import Change
 
 
 def edit(start: int, end: int, replacement: str) -> Edit:

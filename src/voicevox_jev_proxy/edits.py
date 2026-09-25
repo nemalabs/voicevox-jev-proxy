@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from vovovo.prosody import Change
-from vovovo.voicevox import AudioQuery
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.voicevox import AudioQuery
 
 SEPARATOR = "、"
 SKIPPED_SUFFIX = "_skipped"

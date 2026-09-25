@@ -1,9 +1,9 @@
 import pytest
 
-from vovovo.accents import Word
-from vovovo.edits import Edit, Rephrase, apply_edits, effective_edits, reading_of, shifted, spoken
-from vovovo.prosody import Change
-from vovovo.split import (
+from voicevox_jev_proxy.accents import Word
+from voicevox_jev_proxy.edits import Edit, Rephrase, apply_edits, effective_edits, reading_of, shifted, spoken
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.split import (
     Span,
     Stretch,
     build_boundary_questions,
@@ -15,8 +15,8 @@ from vovovo.split import (
     join_moved_boundaries,
     strip_inserted_pauses,
 )
-from vovovo.typesafe import ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.typesafe import ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 
 def choice(value: str, confidence: float = 0.9) -> ChoiceAnswer:

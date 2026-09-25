@@ -1,7 +1,7 @@
 import pytest
 
-from vovovo.cli import REGROUPED, Corrector, Voice, carry_answers
-from vovovo.intonation import (
+from voicevox_jev_proxy.cli import REGROUPED, Corrector, Voice, carry_answers
+from voicevox_jev_proxy.intonation import (
     LATE_PEAK,
     Height,
     build_height_questions,
@@ -9,10 +9,10 @@ from vovovo.intonation import (
     lower_heights,
     move_late_nuclei,
 )
-from vovovo.phrase_accents import Token
-from vovovo.prosody import Policy
-from vovovo.typesafe import ChoiceAnswer, SystemOneRequest, SystemOneResponse
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.phrase_accents import Token
+from voicevox_jev_proxy.prosody import Policy
+from voicevox_jev_proxy.typesafe import ChoiceAnswer, SystemOneRequest, SystemOneResponse
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 PAUSE = Mora(text="、", vowel="pau", vowel_length=0.3, pitch=0.0)
 

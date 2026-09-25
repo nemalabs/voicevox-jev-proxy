@@ -10,11 +10,11 @@ import fugashi
 from pydantic import JsonValue
 from sudachipy import Dictionary, Morpheme, SplitMode
 
-from vovovo.accents import SKIPPED_FIELD, AccentTarget, Word, mora_total, phrase_accent, phrase_starts
-from vovovo.edits import YOTSUGANA, Edit, spoken
-from vovovo.prosody import Change
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery
+from voicevox_jev_proxy.accents import SKIPPED_FIELD, AccentTarget, Word, mora_total, phrase_accent, phrase_starts
+from voicevox_jev_proxy.edits import YOTSUGANA, Edit, spoken
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery
 
 NONE_KEY = "none"
 READING_FIELD = "reading"

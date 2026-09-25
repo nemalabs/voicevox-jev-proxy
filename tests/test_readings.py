@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from vovovo.accents import Word
-from vovovo.cli import plan_text
-from vovovo.readings import (
+from voicevox_jev_proxy.accents import Word
+from voicevox_jev_proxy.cli import plan_text
+from voicevox_jev_proxy.readings import (
     AccentDictionary,
     Entry,
     Gloss,
@@ -34,8 +34,8 @@ from vovovo.readings import (
     voicevox_keys,
     with_voicevox_reading,
 )
-from vovovo.typesafe import ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.typesafe import ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 DICT_PATH = Path(os.environ.get("SUDACHI_DICT_PATH", ""))
 needs_sudachi = pytest.mark.skipif(not DICT_PATH.is_file(), reason="SUDACHI_DICT_PATH not set to a dictionary file")

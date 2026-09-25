@@ -1,4 +1,4 @@
-# vovovo
+# voicevox-jev-proxy
 
 VOICEVOX の読み・アクセント・イントネーションを、TypeSafe の Jev に判断させて直すツール。1 文ずつ WAV に書き出すコマンドと、VOICEVOX 互換の API サーバーがある。
 
@@ -62,7 +62,7 @@ JMDICT_PATH=.cache/jmdict/JMdict_e.gz
 ### 1 文を直して WAV に書き出す
 
 ```sh
-uv run vovovo "雨が降ってきたから、傘を持っていくのだ。"
+uv run voicevox-jev-correct "雨が降ってきたから、傘を持っていくのだ。"
 ```
 
 `.build/out.before.wav` (VOICEVOX のまま) と `.build/out.wav` (直したもの) ができる。何を変えたかは標準出力に出る。
@@ -74,7 +74,7 @@ uv run vovovo "雨が降ってきたから、傘を持っていくのだ。"
 ### VOICEVOX 互換サーバー
 
 ```sh
-uv run vovovo-server
+uv run voicevox-jev-proxy
 ```
 
 `http://127.0.0.1:50121` で待ち受ける。VOICEVOX を使うアプリの接続先をこのアドレスに変えると、`POST /audio_query` の結果が直したものになる。ほかのリクエストはそのまま VOICEVOX に転送する。

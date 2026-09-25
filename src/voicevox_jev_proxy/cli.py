@@ -5,9 +5,16 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Protocol
 
-from vovovo.accents import SKIPPED_FIELD, AccentTarget, apply_accents, attachable_phrases, moved, phrase_starts
-from vovovo.edits import SEPARATOR, Edit, apply_edits, drop_overlaps, effective_edits
-from vovovo.intonation import (
+from voicevox_jev_proxy.accents import (
+    SKIPPED_FIELD,
+    AccentTarget,
+    apply_accents,
+    attachable_phrases,
+    moved,
+    phrase_starts,
+)
+from voicevox_jev_proxy.edits import SEPARATOR, Edit, apply_edits, drop_overlaps, effective_edits
+from voicevox_jev_proxy.intonation import (
     HEIGHT_SKIPPED_FIELD,
     Height,
     build_height_questions,
@@ -15,7 +22,7 @@ from vovovo.intonation import (
     lower_heights,
     move_late_nuclei,
 )
-from vovovo.laughter import (
+from voicevox_jev_proxy.laughter import (
     Laugh,
     build_laugh_questions,
     find_laughs,
@@ -24,8 +31,8 @@ from vovovo.laughter import (
     overlaps,
     voiced_spans,
 )
-from vovovo.phrase_accents import Token, UnidicTokenizer
-from vovovo.prosody import (
+from voicevox_jev_proxy.phrase_accents import Token, UnidicTokenizer
+from voicevox_jev_proxy.prosody import (
     SENTENCE_TYPE_KEY,
     UNIT_SUFFIX,
     Change,
@@ -39,7 +46,7 @@ from vovovo.prosody import (
     phrase_id,
     unit_key,
 )
-from vovovo.readings import (
+from voicevox_jev_proxy.readings import (
     AccentDictionary,
     GlossDictionary,
     ReadingCandidate,
@@ -53,8 +60,8 @@ from vovovo.readings import (
     voicevox_keys,
     with_voicevox_reading,
 )
-from vovovo.settings import Settings
-from vovovo.split import (
+from voicevox_jev_proxy.settings import Settings
+from voicevox_jev_proxy.split import (
     Span,
     Stretch,
     build_boundary_questions,
@@ -66,7 +73,7 @@ from vovovo.split import (
     join_moved_boundaries,
     strip_inserted_pauses,
 )
-from vovovo.typesafe import (
+from voicevox_jev_proxy.typesafe import (
     Answer,
     ChoiceAnswer,
     NoulAnswer,
@@ -77,7 +84,7 @@ from vovovo.typesafe import (
     render_request,
     send,
 )
-from vovovo.voicevox import AccentPhrase, AudioQuery, VoicevoxClient
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, VoicevoxClient
 
 DEFAULT_SPEAKER = 3
 DEFAULT_THRESHOLD = 0.6
@@ -114,7 +121,9 @@ class Voice:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="vovovo", description="Synthesize with VOICEVOX after Jev prosody judgments")
+    parser = argparse.ArgumentParser(
+        prog="voicevox-jev-correct", description="Synthesize with VOICEVOX after Jev prosody judgments"
+    )
     parser.add_argument("text")
     parser.add_argument("--speaker", type=int, default=DEFAULT_SPEAKER)
     parser.add_argument("--out", type=Path, default=Path(".build/out.wav"))

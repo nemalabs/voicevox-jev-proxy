@@ -16,12 +16,12 @@ from dataclasses import dataclass
 import fugashi
 from pydantic import JsonValue
 
-from vovovo.accents import mora_total, phrase_starts
-from vovovo.edits import spoken
-from vovovo.prosody import ACCENT_FIELD, Change, Policy, phrase_id
-from vovovo.readings import accent_types, mora_count
-from vovovo.typesafe import Answer, ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery
+from voicevox_jev_proxy.accents import mora_total, phrase_starts
+from voicevox_jev_proxy.edits import spoken
+from voicevox_jev_proxy.prosody import ACCENT_FIELD, Change, Policy, phrase_id
+from voicevox_jev_proxy.readings import accent_types, mora_count
+from voicevox_jev_proxy.typesafe import Answer, ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery
 
 NONE_KEY = "none"
 NOUN_RULES = "名詞"

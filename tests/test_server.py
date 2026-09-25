@@ -5,11 +5,11 @@ from http.server import ThreadingHTTPServer
 import httpx
 import pytest
 
-from vovovo import server
-from vovovo.cli import Correction
-from vovovo.prosody import Change
-from vovovo.settings import Settings
-from vovovo.typesafe import (
+from voicevox_jev_proxy import server
+from voicevox_jev_proxy.cli import Correction
+from voicevox_jev_proxy.prosody import Change
+from voicevox_jev_proxy.settings import Settings
+from voicevox_jev_proxy.typesafe import (
     ChoiceAnswer,
     Pacer,
     RequestCapError,
@@ -17,7 +17,7 @@ from vovovo.typesafe import (
     SystemOneResponse,
     TypeSafeError,
 )
-from vovovo.voicevox import AudioQuery
+from voicevox_jev_proxy.voicevox import AudioQuery
 
 QUERY = {
     "accent_phrases": [

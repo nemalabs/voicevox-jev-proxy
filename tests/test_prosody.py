@@ -1,6 +1,6 @@
 import pytest
 
-from vovovo.prosody import (
+from voicevox_jev_proxy.prosody import (
     Counterpart,
     PhraseRoles,
     Policy,
@@ -11,8 +11,8 @@ from vovovo.prosody import (
     match_phrases,
     needs_repitch,
 )
-from vovovo.typesafe import ChoiceAnswer
-from vovovo.voicevox import AccentPhrase, AudioQuery, Mora
+from voicevox_jev_proxy.typesafe import ChoiceAnswer
+from voicevox_jev_proxy.voicevox import AccentPhrase, AudioQuery, Mora
 
 POLICY = Policy(threshold=0.6)
 
