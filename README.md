@@ -1,6 +1,8 @@
 # voicevox-jev-proxy
 
-VOICEVOX の読み・アクセント・イントネーションを、TypeSafe の Jev に判断させて直すツール。1 文ずつ WAV に書き出すコマンドと、VOICEVOX 互換の API サーバーがある。
+VOICEVOX の読みを、[TypeSafe](https://typesafe.ai/) の Jev に判断させて直すツール。`--intonation` を付けると、イントネーションも直す。1 文ずつ WAV に書き出すコマンドと、VOICEVOX 互換の API サーバーがある。
+
+Jev は TypeSafe のモデルで、SystemOne API (`https://api.typesafe.ai/v1/systemone`) に選択式の質問を送ると、選んだ答えと確信度を返す。
 
 ## しくみ
 
@@ -16,9 +18,9 @@ VOICEVOX の読み・アクセント・イントネーションを、TypeSafe �
 
 4. 2 回目のリクエストで、アクセント句が前の句に付くかどうか、文末の型 (言い切り・疑問・念押しなど)、句どうしのかかり方を聞いて、クエリに反映する。かかり方の答えは、修飾する句のあとで VOICEVOX が上げた句を下げるのに使う。VOICEVOX がアクセント核を 1 拍遅らせるところは、Jev に聞かずに直す。
 
-イントネーションの補正は開発途中で、精度がまだ微妙なので、オプションにしてある。`--intonation` を付けると Jev へのリクエストが 1 文につき 2 回走るので注意。`--intonation` に `--requests 1` を足すと、2 回のリクエストを 1 回にまとめる。
+イントネーションの補正は開発途中で、まだ精度が十分でないため、オプションにしてある。`--intonation` を付けると、Jev へのリクエストが 1 文につき 2 回になる点に注意。`--intonation` に `--requests 1` を足すと、2 回のリクエストを 1 回にまとめる。
 
-確信度がしきい値 (既定 0.6、句の高さは 0.8) に届かない答えは使わない。
+確信度がしきい値 (既定 0.6。`--intonation` での句の高さの答えは 0.8) に届かない答えは使わない。
 
 ## 必要なもの
 
@@ -109,16 +111,17 @@ SUDACHI_DICT_PATH=.cache/sudachi/sudachi-dictionary-20260723/system_full.dic uv 
 
 - Sudachi 辞書: Apache License 2.0 (zip に入っている `LEGAL` と `LICENSE-2.0.txt`)
 - JMdict: EDRDG のライセンス (Creative Commons Attribution-ShareAlike 4.0)
-- UniDic: unidic-lite に同梱の BSD ライセンス (The UniDic Consortium)
+- UniDic: GPL、LGPL、BSD ライセンスのいずれか (The UniDic Consortium)。unidic-lite には BSD ライセンスの文が入っている
 
 VOICEVOX で作った音声は、VOICEVOX と各キャラクターの利用規約に従う。
 
-## 謝辞
+## 辞書の出典
 
 This package uses the JMdict dictionary file. This file is the property of the Electronic Dictionary Research and Development Group, and is used in conformance with the Group's licence.
 
 - JMdict: <https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project>
 - EDRDG licence: <https://www.edrdg.org/edrdg/licence.html>
+- EDRDG: <https://www.edrdg.org/>
 - SudachiDict: <https://github.com/WorksApplications/SudachiDict>
 - UniDic: <https://unidic.ninjal.ac.jp/>
 - unidic-lite: <https://github.com/polm/unidic-lite>
