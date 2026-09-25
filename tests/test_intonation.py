@@ -189,7 +189,7 @@ def test_corrector_lowers_heights_after_the_last_repitch():
         answers = {"p1_head": choice("following")} if "p1_head" in request.questions else {}
         return SystemOneResponse(model="jev-1.13.0", answers=answers)
 
-    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy())
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), intonation=True)
     correction = corrector.correct("ソラガハレルヒモ", Voice(stub, 3), ask)
     assert "p1_head" in sent[-1].questions
     assert [p.accent for p in stub.repitched[0]] == [3, 1, 1]
@@ -201,7 +201,7 @@ def test_corrector_lowers_heights_after_the_last_repitch():
 
 
 def test_corrector_requests_include_the_height_questions():
-    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy())
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), intonation=True)
     requests = corrector.requests("ソラガハレルヒモ", Voice(RereadingVoicevox(), 3))
     assert "p1_head" in requests[-1].questions
 
@@ -274,7 +274,7 @@ def silencing_ask(sent: list[SystemOneRequest]):
 def test_one_request_corrector_asks_about_the_text_and_voicevox_phrases_at_once():
     stub = LaughingVoicevox()
     sent: list[SystemOneRequest] = []
-    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), one_request=True)
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), intonation=True, one_request=True)
     corrector.correct("ソラガハレルwヒモ", Voice(stub, 3), silencing_ask(sent))
     assert corrector.requests("ソラガハレルwヒモ", Voice(stub, 3)) == sent
     request = sent[0]
@@ -292,7 +292,7 @@ def test_one_request_corrector_asks_about_the_text_and_voicevox_phrases_at_once(
 
 def test_one_request_corrector_lowers_the_pair_it_asked_about_after_a_laugh_is_dropped():
     sent: list[SystemOneRequest] = []
-    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), one_request=True)
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy(), intonation=True, one_request=True)
     correction = corrector.correct("ソラガハレルwヒモ", Voice(LaughingVoicevox(), 3), silencing_ask(sent))
     assert len(sent) == 1
     assert correction.text == "ソラガハレルヒモ"
@@ -306,3 +306,30 @@ def test_one_request_corrector_lowers_the_pair_it_asked_about_after_a_laugh_is_d
         ("p2", "accent"),
         ("p2", "height"),
     ]
+
+
+def test_corrector_without_intonation_asks_only_about_the_text_and_keeps_voicevox_phrases():
+    stub = LaughingVoicevox()
+    sent: list[SystemOneRequest] = []
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy())
+    correction = corrector.correct("ソラガハレルwヒモ", Voice(stub, 3), silencing_ask(sent))
+    assert corrector.requests("ソラガハレルwヒモ", Voice(stub, 3)) == sent
+    assert set(sent[0].questions) == {"l6_laugh"}
+    assert correction.text == "ソラガハレルヒモ"
+    final = correction.query.accent_phrases
+    assert [p.reading for p in final] == ["ソラガ", "ハレル", "ヒモ"]
+    assert [p.accent for p in final] == [3, 2, 1]
+    assert [m.pitch for m in final[1].moras] == [5.4, 6.1, 5.3]
+    assert stub.repitched == []
+    assert [(c.phrase_id, c.field) for c in correction.changes] == [("l6", "laugh")]
+
+
+def test_corrector_without_intonation_sends_nothing_when_the_text_raises_no_question():
+    stub = RereadingVoicevox()
+    sent: list[SystemOneRequest] = []
+    corrector = Corrector(None, KanaTokenizer(), "jev-latest", Policy())
+    correction = corrector.correct("ソラガハレルヒモ", Voice(stub, 3), silencing_ask(sent))
+    assert sent == []
+    assert corrector.requests("ソラガハレルヒモ", Voice(stub, 3)) == []
+    assert correction.query == correction.original
+    assert correction.changes == []

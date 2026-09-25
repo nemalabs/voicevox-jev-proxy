@@ -253,12 +253,38 @@ def offline_settings(monkeypatch):
 def test_main_dry_run_prints_request_and_sends_nothing(monkeypatch, capsys, offline_settings):
     offline_settings()
     monkeypatch.setattr(cli, "VoicevoxClient", StubVoicevox)
-    assert cli.main(["雨が降る", "--dry-run"]) == 0
+    assert cli.main(["雨が降る", "--dry-run", "--intonation"]) == 0
     out = capsys.readouterr().out
     assert "POST https://api.typesafe.ai/v1/systemone" in out
     assert '"sentence_type"' in out
     assert "_sense" not in out
     assert "[dry-run] request not sent" in out
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        (["十里はなれた"], (1, False)),
+        (["雨が降る"], (0, False)),
+        (["十里はなれた", "--intonation"], (2, True)),
+        (["十里はなれた", "--intonation", "--requests", "1"], (1, True)),
+    ],
+)
+def test_main_asks_about_the_phrases_only_with_intonation(
+    monkeypatch, capsys, offline_settings, argv: list[str], expected: tuple[int, bool]
+):
+    offline_settings()
+    monkeypatch.setattr(cli, "VoicevoxClient", StubVoicevox)
+    assert cli.main([*argv, "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert (out.count("POST https://api.typesafe.ai/v1/systemone"), '"sentence_type"' in out) == expected
+    assert "[dry-run] request not sent" in out
+
+
+def test_main_needs_intonation_for_requests(capsys):
+    with pytest.raises(SystemExit):
+        cli.main(["雨が降る", "--requests", "1"])
+    assert "--requests needs --intonation" in capsys.readouterr().err
 
 
 def test_main_without_key_fails_before_sending(monkeypatch, capsys, offline_settings):
@@ -295,7 +321,11 @@ def test_main_splits_text_before_phrase_questions(monkeypatch, capsys, offline_s
     before_path = Path(".build/tests/split.before.wav")
     try:
         stub, code = run_main_with(
-            monkeypatch, offline_settings, answers, ["十里はなれた", "--out", str(out_path)], split_answers
+            monkeypatch,
+            offline_settings,
+            answers,
+            ["十里はなれた", "--out", str(out_path), "--intonation"],
+            split_answers,
         )
         assert code == 0
     finally:
@@ -319,7 +349,8 @@ def test_main_skips_repitch_when_accent_is_unchanged(monkeypatch, capsys, offlin
     out_path = Path(".build/tests/q.wav")
     before_path = Path(".build/tests/q.before.wav")
     try:
-        stub, code = run_main_with(monkeypatch, offline_settings, answers, ["降るの", "--out", str(out_path)], {})
+        argv = ["降るの", "--out", str(out_path), "--intonation"]
+        stub, code = run_main_with(monkeypatch, offline_settings, answers, argv, {})
         assert code == 0
     finally:
         out_path.unlink(missing_ok=True)
@@ -346,12 +377,14 @@ class KanaHomographLexicon:
         return [ReadingCandidate(0, 2, "あめ", "名詞", options, 1)]
 
 
+WORD_ANSWERS = {
+    "r0_reading": ChoiceAnswer(type="choice", choice="アメ(飴)", confidence=0.9, probabilities={"アメ(飴)": 0.9}),
+}
+
+
 def test_main_applies_the_accent_of_the_chosen_word_and_repitches(monkeypatch, capsys, offline_settings):
     monkeypatch.setattr(cli, "ReadingLexicon", KanaHomographLexicon)
     monkeypatch.setattr(cli, "AccentDictionary", lambda: None)
-    word_answers = {
-        "r0_reading": ChoiceAnswer(type="choice", choice="アメ(飴)", confidence=0.9, probabilities={"アメ(飴)": 0.9}),
-    }
     answers = {
         "sentence_type": ChoiceAnswer(
             type="choice", choice="statement", confidence=0.9, probabilities={"statement": 0.9}
@@ -359,9 +392,9 @@ def test_main_applies_the_accent_of_the_chosen_word_and_repitches(monkeypatch, c
     }
     out_path = Path(".build/tests/accent.wav")
     before_path = Path(".build/tests/accent.before.wav")
-    argv = ["あめが降る", "--out", str(out_path), "--sudachi-dict", "unused.dic"]
+    argv = ["あめが降る", "--out", str(out_path), "--sudachi-dict", "unused.dic", "--intonation"]
     try:
-        stub, code = run_main_with(monkeypatch, offline_settings, answers, argv, word_answers)
+        stub, code = run_main_with(monkeypatch, offline_settings, answers, argv, WORD_ANSWERS)
         assert code == 0
         assert before_path.read_bytes() == b"RIFF1"
         assert out_path.read_bytes() == b"RIFF2"
@@ -379,3 +412,24 @@ def test_main_applies_the_accent_of_the_chosen_word_and_repitches(monkeypatch, c
     final = stub.synthesized[1].accent_phrases[0]
     assert [m.pitch for m in final.moras] == pytest.approx([REPITCHED, REPITCHED])
     assert [m.pitch for m in stub.synthesized[0].accent_phrases[0].moras] == [5.7, 6.0]
+
+
+def test_main_applies_the_accent_of_the_chosen_word_in_one_request_by_default(monkeypatch, capsys, offline_settings):
+    monkeypatch.setattr(cli, "ReadingLexicon", KanaHomographLexicon)
+    monkeypatch.setattr(cli, "AccentDictionary", lambda: None)
+    out_path = Path(".build/tests/default.wav")
+    before_path = Path(".build/tests/default.before.wav")
+    argv = ["あめが降る", "--out", str(out_path), "--sudachi-dict", "unused.dic"]
+    try:
+        stub, code = run_main_with(monkeypatch, offline_settings, WORD_ANSWERS, argv)
+        assert code == 0
+        assert before_path.read_bytes() == b"RIFF1"
+        assert out_path.read_bytes() == b"RIFF2"
+    finally:
+        out_path.unlink(missing_ok=True)
+        before_path.unlink(missing_ok=True)
+    printed = capsys.readouterr().out
+    assert printed.count("POST https://api.typesafe.ai/v1/systemone") == 1
+    assert '"sentence_type"' not in printed
+    assert "r0.accent: アメ(1) -> アメ(2) (reading=アメ(飴) confidence=0.90 accent_type=0)" in printed
+    assert [p[0].accent for p in stub.repitched] == [2]

@@ -90,7 +90,6 @@ DEFAULT_SPEAKER = 3
 DEFAULT_THRESHOLD = 0.6
 DEFAULT_HEIGHT_THRESHOLD = 0.8
 REQUEST_INTERVAL_SEC = 3.0
-DEFAULT_REQUESTS = 2
 PAUSE_KEPT_FIELD = "pause_kept"
 SKIPPED_SUFFIX = "_skipped"
 REGROUPED = "asked about the phrase before the text edits, which regrouped it"
@@ -122,7 +121,9 @@ class Voice:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="voicevox-jev-correct", description="Synthesize with VOICEVOX after Jev prosody judgments"
+        prog="voicevox-jev-correct",
+        description="Synthesize with VOICEVOX after Jev corrects the readings in at most one TypeSafe request per "
+        "text, and the intonation too with --intonation",
     )
     parser.add_argument("text")
     parser.add_argument("--speaker", type=int, default=DEFAULT_SPEAKER)
@@ -145,12 +146,24 @@ def add_correction_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--jmdict", type=Path, default=None, help="JMdict_e.gz for the meanings of reading candidates")
     parser.add_argument(
+        "--intonation",
+        action="store_true",
+        help="also correct intonation, which is still in development and not accurate yet; it asks about the accent "
+        "phrases in a second TypeSafe request, so a text takes up to two",
+    )
+    parser.add_argument(
         "--requests",
         type=int,
         choices=(1, 2),
-        default=DEFAULT_REQUESTS,
-        help="TypeSafe requests per text: 1 asks about the text and its accent phrases together",
+        default=None,
+        help="TypeSafe requests per text with --intonation, 2 when left out: 1 asks about the text and its accent "
+        "phrases together",
     )
+
+
+def check_correction_arguments(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.requests is not None and not args.intonation:
+        parser.error("--requests needs --intonation")
 
 
 def render_answers(response: SystemOneResponse) -> str:
@@ -361,11 +374,14 @@ class Correction:
 
 @dataclass(frozen=True)
 class Corrector:
-    """Corrects a text with TypeSafe requests about the text and about its accent phrases.
+    """Corrects a text with a TypeSafe request about the text, and with intonation about its accent phrases too.
 
-    In two requests, the phrase questions come second and are about the text as the first answers
-    edited it. In one, they are about VOICEVOX's phrases of the text as given, and each answer moves to
-    the phrase covering the same words after the edits (`carry_answers`).
+    Without intonation, the phrases stay as VOICEVOX reads the edited text, apart from the accents of
+    the words read anew.
+    With intonation, in two requests the phrase questions come second and are about the text as the
+    first answers edited it. In one (one_request, which counts only with intonation), they are about
+    VOICEVOX's phrases of the text as given, and each answer moves to the phrase covering the same words
+    after the edits (`carry_answers`).
     The phrase questions also ask how phrases hang together; those answers lower phrases VOICEVOX raises
     after a phrase that modifies them. Nuclei VOICEVOX would hide are moved earlier without asking.
     """
@@ -374,23 +390,26 @@ class Corrector:
     tokenizer: Tokenizer
     model: str
     policy: Policy
+    intonation: bool = False
     one_request: bool = False
 
     def requests(self, text: str, voice: Voice) -> list[SystemOneRequest]:
         """Return the requests a correction would start with, before any answers shape a second one."""
         original = voice.read(text)
         plan = plan_text(text, self.lexicon, original, voice.read)
+        first = text_request(plan, self.model)
+        if not self.intonation:
+            return [] if first is None else [first]
         heights = find_heights(text, original, self.tokenizer.tokens(text), voice.read)
         if self.one_request:
             return [combined_request(plan, original, self.model, heights)]
-        first = text_request(plan, self.model)
         second = phrase_request(text, original, self.model, heights=heights)
         return [second] if first is None else [first, second]
 
     def correct(self, text: str, voice: Voice, ask: Ask) -> Correction:
         original = voice.read(text)
         plan = plan_text(text, self.lexicon, original, voice.read)
-        if self.one_request:
+        if self.intonation and self.one_request:
             asked = find_heights(text, original, self.tokenizer.tokens(text), voice.read)
             answers = ask(combined_request(plan, original, self.model, asked)).answers
             done = edit_text(plan, original, answers, self.policy, voice)
@@ -400,6 +419,8 @@ class Corrector:
         done = EditedText(text, original, [], [])
         if first is not None:
             done = edit_text(plan, original, ask(first).answers, self.policy, voice)
+        if not self.intonation:
+            return Correction(done.text, original, done.query, done.changes)
         heights = find_heights(done.text, done.query, self.tokenizer.tokens(done.text), voice.read)
         answers = ask(phrase_request(done.text, done.query, self.model, heights)).answers
         return self._finish(original, done, answers, heights, voice)
@@ -437,11 +458,20 @@ def build_lexicon(args: argparse.Namespace, settings: Settings) -> ReadingLexico
 def build_corrector(args: argparse.Namespace, settings: Settings) -> Corrector:
     policy = Policy(threshold=args.threshold, height_threshold=args.height_threshold)
     lexicon = build_lexicon(args, settings)
-    return Corrector(lexicon, UnidicTokenizer(), settings.typesafe_model, policy, one_request=args.requests == 1)
+    return Corrector(
+        lexicon,
+        UnidicTokenizer(),
+        settings.typesafe_model,
+        policy,
+        intonation=args.intonation,
+        one_request=args.requests == 1,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    check_correction_arguments(parser, args)
     settings = Settings()
     voice = Voice(VoicevoxClient(settings.voicevox_url), args.speaker)
     corrector = build_corrector(args, settings)

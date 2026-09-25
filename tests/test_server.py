@@ -283,6 +283,11 @@ def test_main_needs_a_request_interval_of_at_least_zero():
         server.main(["--request-interval", "-1"])
 
 
+def test_main_needs_intonation_for_requests():
+    with pytest.raises(SystemExit):
+        server.main(["--requests", "1"])
+
+
 class StoppedServer:
     def __init__(self, _address, _handler) -> None:
         pass
@@ -312,3 +317,19 @@ def test_main_paces_typesafe_requests_as_the_flags_say(monkeypatch, argv: list[s
     monkeypatch.setattr(server, "ThreadingHTTPServer", StoppedServer)
     assert server.main(argv) == 0
     assert pacers == [expected]
+
+
+@pytest.mark.parametrize(("argv", "expected"), [([], [False]), (["--intonation"], [True])])
+def test_main_corrects_intonation_only_when_asked(monkeypatch, argv: list[str], expected: list[bool]):
+    seen: list[bool] = []
+
+    def recording_corrector(args, _settings) -> FakeCorrector:
+        seen.append(args.intonation)
+        return FakeCorrector()
+
+    settings = Settings(_env_file=None, typesafe_api_key="k", sudachi_dict_path=None, jmdict_path=None)
+    monkeypatch.setattr(server, "Settings", lambda: settings)
+    monkeypatch.setattr(server, "build_corrector", recording_corrector)
+    monkeypatch.setattr(server, "ThreadingHTTPServer", StoppedServer)
+    assert server.main(argv) == 0
+    assert seen == expected

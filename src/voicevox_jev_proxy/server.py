@@ -25,6 +25,7 @@ from voicevox_jev_proxy.cli import (
     Voice,
     add_correction_arguments,
     build_corrector,
+    check_correction_arguments,
     render_answers,
     render_changes,
 )
@@ -235,7 +236,8 @@ def dry_correction(corrector: Corrector, client: VoicevoxClient, settings: Setti
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="voicevox-jev-proxy",
-        description="VOICEVOX-compatible server that corrects readings and intonation with Jev",
+        description="VOICEVOX-compatible server that corrects readings with Jev in at most one TypeSafe request per "
+        "text, and intonation too with --intonation",
     )
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -262,6 +264,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    check_correction_arguments(parser, args)
     if args.request_cap < 1:
         parser.error("--request-cap must be at least 1")
     if args.request_interval < 0:
