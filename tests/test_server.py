@@ -1,6 +1,7 @@
 import json
+import socket
 import threading
-from http.server import ThreadingHTTPServer
+from urllib.parse import urlencode
 
 import httpx
 import pytest
@@ -85,9 +86,15 @@ class Upstream:
         return self._response or httpx.Response(200, json=[{"name": "ずんだもん"}])
 
 
-def app_with(correct, upstream: Upstream | None = None, origins: frozenset[str] = frozenset()) -> server.App:
+EVERY_INTERFACE = "0.0.0.0"  # noqa: S104
+HOSTS = server.own_hosts("127.0.0.1", 50121, [])
+
+
+def app_with(
+    correct, upstream: Upstream | None = None, origins: frozenset[str] = frozenset(), hosts: frozenset[str] = HOSTS
+) -> server.App:
     client = httpx.Client(transport=httpx.MockTransport(upstream or Upstream()))
-    return server.App(correct, client, "http://voicevox.test/", origins)
+    return server.App(correct, client, "http://voicevox.test/", origins, hosts, max_text_length=5)
 
 
 def test_audio_query_answers_with_the_corrected_query_in_voicevox_field_names():
@@ -126,6 +133,55 @@ def test_audio_query_answers_only_the_web_pages_allowed():
     assert allowed.status == 200
     assert ("Access-Control-Allow-Origin", "http://localhost:3000") in allowed.headers
     assert correct.calls == [("雨", 3)]
+
+
+@pytest.mark.parametrize("method", ["POST", "GET"])
+def test_requests_for_another_host_are_refused(method: str):
+    correct, upstream = Corrections(), Upstream()
+    target = AUDIO_QUERY if method == "POST" else "/user_dict"
+    reply = app_with(correct, upstream).handle(method, target, {"host": "rebind.example:50121"}, b"")
+    assert reply.status == 403
+    assert correct.calls == []
+    assert upstream.seen == []
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1:50121", "LOCALHOST:50121", "[::1]:50121", None])
+def test_requests_for_this_server_or_without_host_are_served(host: str | None):
+    correct = Corrections()
+    headers = {} if host is None else {"host": host}
+    assert app_with(correct).handle("POST", AUDIO_QUERY, headers, b"").status == 200
+    assert correct.calls == [("雨", 3)]
+
+
+def test_own_hosts_adds_the_bound_address_and_those_allowed_but_not_a_wildcard():
+    assert "192.168.1.5:50121" in server.own_hosts("192.168.1.5", 50121, [])
+    assert "[fe80::1]:50121" in server.own_hosts("fe80::1", 50121, [])
+    assert "pc.local:50121" in server.own_hosts(EVERY_INTERFACE, 50121, ["PC.local:50121"])
+    assert server.own_hosts(EVERY_INTERFACE, 50121, []) == HOSTS
+
+
+def test_audio_query_refuses_a_text_past_the_length_limit():
+    correct, upstream = Corrections(), Upstream()
+    target = "/audio_query?" + urlencode({"text": "雨" * 6, "speaker": 3})
+    reply = app_with(correct, upstream).handle("POST", target, {}, b"")
+    assert reply.status == 413
+    assert correct.calls == []
+    assert upstream.seen == []
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [(None, 0), ("12", 12), (str(server.MAX_BODY_BYTES), server.MAX_BODY_BYTES)],
+)
+def test_body_length_reads_content_length(header: str | None, expected: int):
+    assert server.body_length(header) == expected
+
+
+@pytest.mark.parametrize(("header", "status"), [("x", 400), (str(server.MAX_BODY_BYTES + 1), 413)])
+def test_body_length_refuses_a_bad_or_too_large_body(header: str, status: int):
+    reply = server.body_length(header)
+    assert isinstance(reply, server.Reply)
+    assert reply.status == status
 
 
 @pytest.mark.parametrize(
@@ -183,20 +239,30 @@ def test_forward_sends_only_paths():
     assert upstream.seen == []
 
 
+def serving(correct: Corrections, upstream: Upstream, limit: int = server.MAX_CONNECTIONS):
+    """Serve on a free port and allow the Host that names it."""
+    httpd = server.LimitedHTTPServer(("127.0.0.1", 0), server.BaseHTTPRequestHandler, limit)
+    port = httpd.server_address[1]
+    httpd.RequestHandlerClass = server.handler_for(app_with(correct, upstream, hosts=HOSTS | {f"127.0.0.1:{port}"}))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd, port
+
+
+def stop(httpd: server.LimitedHTTPServer) -> None:
+    httpd.shutdown()
+    httpd.server_close()
+
+
 def test_handler_serves_the_app_over_http():
     correct, upstream = Corrections(), Upstream(httpx.Response(200, content=b"RIFF"))
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.handler_for(app_with(correct, upstream)))
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
+    httpd, port = serving(correct, upstream)
     try:
-        base = f"http://127.0.0.1:{httpd.server_address[1]}"
+        base = f"http://127.0.0.1:{port}"
         with httpx.Client(trust_env=False) as client:
             corrected = client.post(f"{base}/audio_query", params={"text": "雨", "speaker": 3})
             synthesized = client.post(f"{base}/synthesis", params={"speaker": 3}, json=corrected.json())
     finally:
-        httpd.shutdown()
-        httpd.server_close()
-        thread.join()
+        stop(httpd)
     assert corrected.status_code == 200
     assert corrected.json() == QUERY
     assert synthesized.content == b"RIFF"
@@ -314,7 +380,7 @@ def test_main_paces_typesafe_requests_as_the_flags_say(monkeypatch, argv: list[s
     monkeypatch.setattr(server, "Settings", lambda: settings)
     monkeypatch.setattr(server, "build_corrector", lambda _args, _settings: FakeCorrector())
     monkeypatch.setattr(server, "Pacer", recording_pacer)
-    monkeypatch.setattr(server, "ThreadingHTTPServer", StoppedServer)
+    monkeypatch.setattr(server, "LimitedHTTPServer", StoppedServer)
     assert server.main(argv) == 0
     assert pacers == [expected]
 
@@ -330,6 +396,48 @@ def test_main_corrects_intonation_only_when_asked(monkeypatch, argv: list[str], 
     settings = Settings(_env_file=None, typesafe_api_key="k", sudachi_dict_path=None, jmdict_path=None)
     monkeypatch.setattr(server, "Settings", lambda: settings)
     monkeypatch.setattr(server, "build_corrector", recording_corrector)
-    monkeypatch.setattr(server, "ThreadingHTTPServer", StoppedServer)
+    monkeypatch.setattr(server, "LimitedHTTPServer", StoppedServer)
     assert server.main(argv) == 0
     assert seen == expected
+
+
+def test_handler_refuses_a_large_body_without_reading_it():
+    upstream = Upstream()
+    httpd, port = serving(Corrections(), upstream)
+    head = f"POST /synthesis HTTP/1.1\r\nContent-Length: {server.MAX_BODY_BYTES + 1}\r\n\r\n"
+    try:
+        with socket.create_connection(("127.0.0.1", port)) as sock:
+            sock.sendall(head.encode())
+            status = sock.makefile("rb").readline()
+    finally:
+        stop(httpd)
+    assert b" 413 " in status
+    assert upstream.seen == []
+
+
+def test_server_closes_connections_past_the_limit():
+    httpd, port = serving(Corrections(), Upstream(), limit=1)
+    try:
+        with socket.create_connection(("127.0.0.1", port)) as held:
+            held.sendall(b"GET")  # an unfinished request keeps the only slot
+            with socket.create_connection(("127.0.0.1", port)) as refused:
+                refused.settimeout(5)
+                assert refused.recv(1) == b""
+    finally:
+        stop(httpd)
+
+
+def test_main_warns_when_listening_past_loopback(monkeypatch, capsys):
+    settings = Settings(_env_file=None, typesafe_api_key="k", sudachi_dict_path=None, jmdict_path=None)
+    monkeypatch.setattr(server, "Settings", lambda: settings)
+    monkeypatch.setattr(server, "build_corrector", lambda _args, _settings: FakeCorrector())
+    monkeypatch.setattr(server, "LimitedHTTPServer", StoppedServer)
+    assert server.main(["--host", EVERY_INTERFACE]) == 0
+    assert "warning: listening on 0.0.0.0" in capsys.readouterr().err
+    assert server.main([]) == 0
+    assert "warning" not in capsys.readouterr().err
+
+
+def test_main_needs_a_max_text_length_of_at_least_one():
+    with pytest.raises(SystemExit):
+        server.main(["--max-text-length", "0"])

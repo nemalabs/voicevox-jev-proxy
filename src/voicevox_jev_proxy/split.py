@@ -68,10 +68,10 @@ def choose_splits(text: str, spans: list[Span], answers: Mapping[str, Answer], t
         answer = answers.get(f"{span.id}_split")
         if not isinstance(answer, ChoiceAnswer) or answer.confidence < threshold:
             continue
-        if answer.choice in (WHOLE_KEY, NONE_KEY) or not answer.choice.startswith("split_"):
-            continue
-        offset = int(answer.choice.removeprefix("split_"))
         surface = text[span.start : span.end]
+        offset = next((offset for offset in range(1, len(surface)) if split_key(offset) == answer.choice), None)
+        if offset is None:
+            continue
         after = f"{surface[:offset]}{SEPARATOR}{surface[offset:]}"
         change = Change(span.id, SPLIT_FIELD, surface, after, f"split confidence={answer.confidence:.2f}")
         position = span.start + offset

@@ -82,6 +82,12 @@ def test_choose_splits_ignores_whole_none_and_low_confidence(value: str):
     assert choose_splits(TEXT, spans, answers, 0.6) == []
 
 
+@pytest.mark.parametrize("value", ["split_0", "split_-1", "split_6", "split_99", "split_x", "cut_2"])
+def test_choose_splits_ignores_offsets_that_were_not_offered(value: str):
+    text = "十里はなれた"
+    assert choose_splits(text, find_spans(text), {"s0_split": choice(value)}, 0.6) == []
+
+
 def test_effective_splits_keeps_only_reading_changes():
     text = "十里はなれた市にやって"
     edits = choose_splits(text, find_spans(text), {"s0_split": choice("split_2"), "s6_split": choice("split_2")}, 0.6)
