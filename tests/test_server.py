@@ -169,19 +169,29 @@ def test_audio_query_refuses_a_text_past_the_length_limit():
     assert upstream.seen == []
 
 
-@pytest.mark.parametrize(
-    ("header", "expected"),
-    [(None, 0), ("12", 12), (str(server.MAX_BODY_BYTES), server.MAX_BODY_BYTES)],
-)
+@pytest.mark.parametrize(("header", "expected"), [(None, 0), ("12", 12), ("100", 100)])
 def test_body_length_reads_content_length(header: str | None, expected: int):
-    assert server.body_length(header) == expected
+    assert server.body_length(header, 100) == expected
 
 
-@pytest.mark.parametrize(("header", "status"), [("x", 400), (str(server.MAX_BODY_BYTES + 1), 413)])
+@pytest.mark.parametrize(("header", "status"), [("x", 400), ("101", 413)])
 def test_body_length_refuses_a_bad_or_too_large_body(header: str, status: int):
-    reply = server.body_length(header)
+    reply = server.body_length(header, 100)
     assert isinstance(reply, server.Reply)
     assert reply.status == status
+
+
+@pytest.mark.parametrize(
+    ("method", "target", "limit"),
+    [
+        ("POST", AUDIO_QUERY, server.MAX_QUERY_BODY_BYTES),
+        ("POST", "/connect_waves", server.MAX_FORWARD_BODY_BYTES),
+        ("GET", "/audio_query", server.MAX_FORWARD_BODY_BYTES),
+    ],
+)
+def test_body_limit_leaves_room_for_the_wavs_voicevox_takes(method: str, target: str, limit: int):
+    assert server.body_limit(method, target) == limit
+    assert server.MAX_FORWARD_BODY_BYTES > server.MAX_QUERY_BODY_BYTES
 
 
 @pytest.mark.parametrize(
@@ -401,10 +411,14 @@ def test_main_corrects_intonation_only_when_asked(monkeypatch, argv: list[str], 
     assert seen == expected
 
 
-def test_handler_refuses_a_large_body_without_reading_it():
-    upstream = Upstream()
-    httpd, port = serving(Corrections(), upstream)
-    head = f"POST /synthesis HTTP/1.1\r\nContent-Length: {server.MAX_BODY_BYTES + 1}\r\n\r\n"
+@pytest.mark.parametrize(
+    ("target", "limit"),
+    [(AUDIO_QUERY, server.MAX_QUERY_BODY_BYTES), ("/connect_waves", server.MAX_FORWARD_BODY_BYTES)],
+)
+def test_handler_refuses_a_large_body_without_reading_it(target: str, limit: int):
+    correct, upstream = Corrections(), Upstream()
+    httpd, port = serving(correct, upstream)
+    head = f"POST {target} HTTP/1.1\r\nContent-Length: {limit + 1}\r\n\r\n"
     try:
         with socket.create_connection(("127.0.0.1", port)) as sock:
             sock.sendall(head.encode())
@@ -412,7 +426,23 @@ def test_handler_refuses_a_large_body_without_reading_it():
     finally:
         stop(httpd)
     assert b" 413 " in status
+    assert correct.calls == []
     assert upstream.seen == []
+
+
+def test_handler_forwards_a_body_past_the_audio_query_limit():
+    upstream = Upstream(httpx.Response(200, content=b"RIFF"))
+    httpd, port = serving(Corrections(), upstream)
+    waves = json.dumps(["A" * server.MAX_QUERY_BODY_BYTES]).encode()
+    try:
+        with httpx.Client(trust_env=False) as client:
+            reply = client.post(
+                f"http://127.0.0.1:{port}/connect_waves", content=waves, headers={"content-type": "application/json"}
+            )
+    finally:
+        stop(httpd)
+    assert reply.status_code == 200
+    assert [len(request.content) for request in upstream.seen] == [len(waves)]
 
 
 def test_server_closes_connections_past_the_limit():

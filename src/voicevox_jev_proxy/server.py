@@ -50,7 +50,9 @@ DEFAULT_PORT = 50121
 DEFAULT_REQUEST_CAP = 20
 DEFAULT_REQUEST_INTERVAL_SEC = 0.0
 DEFAULT_MAX_TEXT_LENGTH = 1000
-MAX_BODY_BYTES = 1024 * 1024
+MAX_QUERY_BODY_BYTES = 1024 * 1024
+# /connect_waves takes base64 WAVs: 64 MiB holds about 17 minutes of 24 kHz 16-bit mono audio.
+MAX_FORWARD_BODY_BYTES = 64 * 1024 * 1024
 MAX_CONNECTIONS = 32
 CLIENT_TIMEOUT_SEC = 30.0
 LOOPBACK_NAMES = ("localhost", "127.0.0.1", "[::1]")
@@ -206,14 +208,20 @@ class App:
         return Reply(response.status_code, kept, response.content)
 
 
-def body_length(header: str | None) -> int | Reply:
-    """Read Content-Length, or the reply refusing it when it is not an integer or is too large."""
+def body_limit(method: str, target: str) -> int:
+    """Return the largest body a request may carry: /audio_query reads none, VOICEVOX takes whole WAVs."""
+    corrected = method == "POST" and urlsplit(target).path == AUDIO_QUERY_PATH
+    return MAX_QUERY_BODY_BYTES if corrected else MAX_FORWARD_BODY_BYTES
+
+
+def body_length(header: str | None, limit: int) -> int | Reply:
+    """Read Content-Length, or the reply refusing it when it is not an integer or is larger than `limit`."""
     try:
         length = int(header or 0)
     except ValueError:
         return error_reply(400, "Content-Length must be an integer")
-    if length > MAX_BODY_BYTES:
-        return error_reply(413, f"the body is larger than {MAX_BODY_BYTES} bytes")
+    if length > limit:
+        return error_reply(413, f"the body is larger than {limit} bytes")
     return length
 
 
@@ -263,7 +271,7 @@ def handler_for(app: App) -> type[BaseHTTPRequestHandler]:
             self._serve()
 
         def _serve(self) -> None:
-            length = body_length(self.headers.get("Content-Length"))
+            length = body_length(self.headers.get("Content-Length"), body_limit(self.command, self.path))
             if isinstance(length, Reply):
                 # The body is left unread, so the connection cannot carry another request.
                 self.close_connection = True
